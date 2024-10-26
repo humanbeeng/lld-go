@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-const (
-	DefaultRefillSize            uint = 5
-	DefaultBucketSize                 = 10
-	DefaultRefillIntervalSeconds      = 1
-)
-
 type TokenBucketLimiter struct {
 	sync.RWMutex
 	config     TokenBucketConfig
