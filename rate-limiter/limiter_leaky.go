@@ -52,9 +52,9 @@ func (lim *LeakyBucketLimiter) Allow(req Request) bool {
 
 	if time.Since(lim.startTime) > time.Second*time.Duration(lim.config.ProcessIntervalSeconds) {
 		// start sending requests to the server
-		for i := range lim.config.RequestsPickupCount {
-
-		}
+		// for i := range lim.config.RequestsPickupCount {
+		//
+		// }
 	}
 
 	return true

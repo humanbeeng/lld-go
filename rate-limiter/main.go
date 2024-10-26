@@ -11,7 +11,7 @@ func main() {
 
 	var lim Limiter
 
-	tbl := NewTokenBucketLimiter()
+	tbl := NewFixedWindowLimiter(FixedWindowConfig{WindowSize: 1, ResetIntervalSeconds: 1})
 
 	lim = &tbl
 
