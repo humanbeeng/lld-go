@@ -1,6 +1,6 @@
 package user
 
 type User struct {
-	Id       int
-	Username string
+	Id   int
+	Name string
 }

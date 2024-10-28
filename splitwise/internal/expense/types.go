@@ -1,29 +1,30 @@
 package expense
 
-type ExpenseType string
+type SplitType string
 
 const (
-	EXACT   ExpenseType = "exact"
-	EQUAL   ExpenseType = "equal"
-	PERCENT ExpenseType = "percent"
+	EXACT   SplitType = "exact"
+	EQUAL   SplitType = "equal"
+	PERCENT SplitType = "percent"
 )
 
-type Contribution struct {
-	UserId int
-	Value  float32
-}
-
 type BalanceSheetItem struct {
-	DebtorId   int
 	CreditorId int
-	Amount     float32
+	DebitorId  int
+	Amount     float64
 }
 
 type Expense struct {
-	Id            int
-	PaidByUserId  int
-	Total         float32
-	Contributions map[int]Contribution
-	ExpenseType   ExpenseType
-	Note          string
+	Id           int
+	PaidByUserId int
+	Shares       map[int]float64
+	Total        float64
+	SplitType    SplitType
+	Note         string
+}
+
+type OwedDetails struct {
+	CreditorsId int
+	DebitorsId  int
+	Amount      float32
 }

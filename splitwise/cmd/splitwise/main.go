@@ -8,74 +8,55 @@ import (
 )
 
 func main() {
-
 	fmt.Println("Splitwise")
-	userService := user.NewUserService()
+
+	us := user.NewUserService()
 	u1 := user.User{
-		Id:       1,
-		Username: "Nithin",
+		Id:   1,
+		Name: "Nithin",
 	}
-
 	u2 := user.User{
-		Id:       2,
-		Username: "Ramu",
+		Id:   2,
+		Name: "Ramu",
 	}
 
-	err := userService.Add(u1)
-	if err != nil {
-		fmt.Println(err)
+	u3 := user.User{
+		Id:   3,
+		Name: "Somu",
 	}
 
-	userService.Add(u2)
+	us.Add(u1)
+	us.Add(u2)
+	us.Add(u3)
 
-	expenseManager := expense.NewExpenseManager(&userService)
+	em := expense.NewExpenseManager(&us)
 
-	expense1 := expense.Expense{
+	e1 := expense.Expense{
 		Id:           1,
 		PaidByUserId: 1,
-		Total:        100,
-		Contributions: map[int]expense.Contribution{
-			2: {
-				UserId: 2,
-				Value:  0,
-			},
+		Shares: map[int]float64{
+			2: 0,
 		},
-		ExpenseType: expense.EXACT,
-		Note:        "Chai sutta",
+		SplitType: expense.EQUAL,
+		Total:     100,
+		Note:      "Chai sutta",
 	}
+	em.AddExpense(e1)
+	em.View(1)
 
-	expense2 := expense.Expense{
+	e2 := expense.Expense{
 		Id:           2,
 		PaidByUserId: 2,
-		Total:        100,
-		Contributions: map[int]expense.Contribution{
-			1: {
-				UserId: 1,
-				Value:  50,
-			},
+		Shares: map[int]float64{
+			1: 100,
 		},
-		ExpenseType: expense.EXACT,
-		Note:        "Idli vada",
+		SplitType: expense.EQUAL,
+		Total:     100,
+		Note:      "Chai sutta",
 	}
+	em.AddExpense(e2)
 
-	err = expenseManager.SubmitExpense(expense1)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = expenseManager.SubmitExpense(expense2)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = expenseManager.Display(1)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = expenseManager.Display(2)
-	if err != nil {
-		fmt.Println(err)
-	}
+	em.View(1)
+	em.View(2)
 
 }

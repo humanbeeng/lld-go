@@ -2,139 +2,121 @@ package expense
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/humanbeeng/lld-go/splitwise/internal/user"
 )
 
 type ExpenseManager struct {
-	ExpenseLog   []Expense
-	BalanceSheet []BalanceSheetItem
-	userService  *user.UserService
+	userService *user.UserService
+	expenseMap  map[int]map[int]float64
 }
 
 func NewExpenseManager(userService *user.UserService) ExpenseManager {
 	return ExpenseManager{
-		ExpenseLog:   make([]Expense, 0),
-		BalanceSheet: make([]BalanceSheetItem, 0),
-		userService:  userService,
+		userService: userService,
+		expenseMap:  make(map[int]map[int]float64, 0),
 	}
 }
 
-func (em *ExpenseManager) SubmitExpense(expense Expense) error {
-	// validate
-	err := em.validateExpense(expense)
+func (em *ExpenseManager) AddExpense(expense Expense) error {
+
+	// TODO: add validation
+
+	_, err := em.userService.Get(expense.PaidByUserId)
 	if err != nil {
 		return err
 	}
 
-	em.ExpenseLog = append(em.ExpenseLog, expense)
-	numOfContributors := len(expense.Contributions)
+	splitDetails := em.calculateSplit(expense.Shares, expense.SplitType, expense.Total)
 
-	switch expense.ExpenseType {
-	case EQUAL:
-		{
-			split := expense.Total / float32(numOfContributors)
-			for _, cont := range expense.Contributions {
-				if cont.UserId != expense.PaidByUserId {
-					item := BalanceSheetItem{
-						DebtorId:   cont.UserId,
-						CreditorId: expense.PaidByUserId,
-						Amount:     expense.Total - split,
-					}
-					em.BalanceSheet = append(em.BalanceSheet, item)
-				}
-			}
+	balanceMap, ok := em.expenseMap[expense.PaidByUserId]
+	if !ok {
+
+		for id, val := range splitDetails {
+			balanceMap = make(map[int]float64)
+			balanceMap[id] = val
+			em.expenseMap[id] = map[int]float64{expense.PaidByUserId: -val}
 		}
 
-	case PERCENT:
-		{
-			for _, cont := range expense.Contributions {
-				if cont.UserId != expense.PaidByUserId {
-					item := BalanceSheetItem{
-						DebtorId:   cont.UserId,
-						CreditorId: expense.PaidByUserId,
-						Amount:     expense.Total - (expense.Total*cont.Value)/100,
-					}
+		em.expenseMap[expense.PaidByUserId] = balanceMap
 
-					em.BalanceSheet = append(em.BalanceSheet, item)
-				}
+	} else {
+
+		for id, val := range splitDetails {
+			balanceMap[id] += val
+
+			if balanceMap[id] == 0 {
+				delete(balanceMap, id)
 			}
+
+			m := em.expenseMap[id]
+			m[expense.PaidByUserId] -= val
+
+			if m[expense.PaidByUserId] == 0 {
+				delete(m, expense.PaidByUserId)
+			}
+
+			em.expenseMap[id] = m
 		}
 
-	case EXACT:
-		{
-			for _, cont := range expense.Contributions {
-				if cont.UserId != expense.PaidByUserId {
-					item := BalanceSheetItem{
-						DebtorId:   cont.UserId,
-						CreditorId: expense.PaidByUserId,
-						Amount:     expense.Total - cont.Value,
-					}
-					em.BalanceSheet = append(em.BalanceSheet, item)
-				}
-
-			}
-		}
+		em.expenseMap[expense.PaidByUserId] = balanceMap
 	}
 
 	return nil
 }
 
-func (em *ExpenseManager) Display(userId int) error {
-	if _, err := em.userService.Get(userId); err != nil {
+func (em *ExpenseManager) calculateSplit(shares map[int]float64, splitType SplitType, total float64) map[int]float64 {
+
+	splitDetails := make(map[int]float64, 0)
+
+	for id, val := range shares {
+		switch splitType {
+		case EQUAL:
+			{
+				splitDetails[id] = math.Round((total * 100) / float64(len(shares)+1) / 100)
+			}
+
+		case EXACT:
+			{
+				splitDetails[id] = val
+			}
+
+		case PERCENT:
+			{
+				splitDetails[id] = (total * val) / 100
+			}
+		}
+	}
+
+	return splitDetails
+}
+
+func (em *ExpenseManager) View(userId int) error {
+	expenseMap, ok := em.expenseMap[userId]
+
+	if !ok {
+		return fmt.Errorf("no balance")
+	}
+	creditor, err := em.userService.Get(userId)
+	if err != nil {
 		return err
 	}
 
-	if len(em.BalanceSheet) == 0 {
-		return fmt.Errorf("no balances")
+	fmt.Printf("--------------------------\n")
+	if len(expenseMap) == 0 {
+		fmt.Println("No balances")
+		return nil
 	}
-
-	for _, item := range em.BalanceSheet {
-		if item.CreditorId == userId {
-			debtor, _ := em.userService.Get(item.DebtorId)
-			creditor, _ := em.userService.Get(item.CreditorId)
-			fmt.Printf("%v owes %v to %v\n", debtor.Username, item.Amount, creditor.Username)
-		}
-	}
-
-	return nil
-}
-
-func (em *ExpenseManager) validateExpense(expense Expense) error {
-
-	if len(expense.Contributions) == 0 {
-		return fmt.Errorf("no contributors found")
-	}
-
-	var total float32
-	for _, cont := range expense.Contributions {
-
-		// check if user exists
-		if _, err := em.userService.Get(cont.UserId); err != nil {
+	for id, val := range expenseMap {
+		debitor, err := em.userService.Get(id)
+		if err != nil {
 			return err
 		}
 
-		if cont.Value < 0 {
-			return fmt.Errorf("invalid contribution value: %v", cont.Value)
-		}
-
-		total += cont.Value
+		fmt.Printf("%v owes %v %v\n", debitor.Name, creditor.Name, val)
 	}
-
-	switch expense.ExpenseType {
-	case EXACT:
-		{
-			if total != expense.Total {
-				return fmt.Errorf("contributions amount mismatch. calculated total: %v. submitted total: %v", total, expense.Total)
-			}
-		}
-	case PERCENT:
-		{
-			if total != float32(100) {
-				return fmt.Errorf("contributions amount mismatch. expected 100%%. got %v", total)
-			}
-		}
-	}
+	fmt.Printf("--------------------------\n\n")
 
 	return nil
 }
