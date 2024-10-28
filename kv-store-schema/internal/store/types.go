@@ -33,4 +33,5 @@ var (
 	ErrInvalidAttrType               = errors.New("invalid attribute type")
 	ErrSchemaAlreadyRegistered       = errors.New("schema already registered")
 	ErrSchemaEntryNotFound           = errors.New("schema entry not found")
+	ErrInvalidNumAttributes          = errors.New("invalid number of attributes")
 )

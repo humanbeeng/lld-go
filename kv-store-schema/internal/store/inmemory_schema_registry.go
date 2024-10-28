@@ -9,19 +9,25 @@ type InMemorySchemaRegistry struct {
 	registry map[RegistryKey]Types
 }
 
-func (sr *InMemorySchemaRegistry) Register(key RegistryKey, value any) error {
+func NewInMemorySchemaRegistry() InMemorySchemaRegistry {
+	return InMemorySchemaRegistry{
+		registry: make(map[RegistryKey]Types),
+	}
+}
+
+func (sr *InMemorySchemaRegistry) Register(key RegistryKey, value any) (Types, error) {
 	if sr.Exists(key) {
-		return errors.Join(ErrSchemaAlreadyRegistered, fmt.Errorf("key %v-%v", key.Key, key.AttrKey))
+		return "", errors.Join(ErrSchemaAlreadyRegistered, fmt.Errorf("key %v-%v", key.Key, key.AttrKey))
 	}
 
-	valType, err := sr.getValueType(value)
+	valType, err := getValueType(value)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	sr.registry[key] = valType
 
-	return nil
+	return valType, nil
 }
 
 func (sr *InMemorySchemaRegistry) GetRegisteredType(key RegistryKey) (Types, error) {
@@ -33,7 +39,7 @@ func (sr *InMemorySchemaRegistry) GetRegisteredType(key RegistryKey) (Types, err
 
 func (sr *InMemorySchemaRegistry) Validate(key RegistryKey, value any) error {
 	if !sr.Exists(key) {
-		return errors.Join(ErrKeyNotFound, fmt.Errorf("key: %v-%v", key.Key, key.AttrKey))
+		return nil
 	}
 
 	typ, err := sr.GetRegisteredType(key)
@@ -41,7 +47,7 @@ func (sr *InMemorySchemaRegistry) Validate(key RegistryKey, value any) error {
 		return err
 	}
 
-	valType, err := sr.getValueType(value)
+	valType, err := getValueType(value)
 	if err != nil {
 		return err
 	}
@@ -66,33 +72,4 @@ func (sr *InMemorySchemaRegistry) Unregister(key RegistryKey) error {
 	delete(sr.registry, key)
 
 	return nil
-}
-
-func (sr *InMemorySchemaRegistry) getValueType(value any) (Types, error) {
-	var valType Types
-
-	switch value.(type) {
-	case int:
-		{
-			valType = Int
-		}
-	case string:
-		{
-			valType = String
-		}
-	case float32:
-		{
-			valType = Float
-		}
-	case bool:
-		{
-			valType = Bool
-		}
-	default:
-		{
-			return "", errors.Join(ErrInvalidAttrType, fmt.Errorf("value type: %T", value))
-		}
-	}
-
-	return valType, nil
 }

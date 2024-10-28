@@ -1,7 +1,7 @@
 package store
 
 type SchemaRegistry interface {
-	Register(key RegistryKey, value any) error
+	Register(key RegistryKey, value any) (Types, error)
 	Validate(key RegistryKey, value any) error
 
 	GetRegisteredType(key RegistryKey) (Types, error)
