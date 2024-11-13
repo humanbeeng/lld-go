@@ -54,7 +54,7 @@ func (lim *FixedWindowLimiter) Allow(req Request) bool {
 
 	ub, ok := lim.UserWindow[req.Key]
 	if !ok {
-
+		// User not found. Create a new user bucket for that user
 		lim.UserWindow[req.Key] = &Window{
 			// TODO: Fetch this from config store
 			WindowSize: lim.config.WindowSize,

@@ -28,7 +28,11 @@ func (em *ExpenseManager) AddExpense(expense Expense) error {
 		return err
 	}
 
-	splitDetails := em.calculateSplit(expense.Shares, expense.SplitType, expense.Total)
+	splitDetails, err := em.calculateSplit(expense.Shares, expense.SplitType, expense.Total)
+
+	if err != nil {
+		return err
+	}
 
 	balanceMap, ok := em.expenseMap[expense.PaidByUserId]
 	if !ok {
@@ -66,7 +70,7 @@ func (em *ExpenseManager) AddExpense(expense Expense) error {
 	return nil
 }
 
-func (em *ExpenseManager) calculateSplit(shares map[int]float64, splitType SplitType, total float64) map[int]float64 {
+func (em *ExpenseManager) calculateSplit(shares map[int]float64, splitType SplitType, total float64) (map[int]float64, error) {
 
 	splitDetails := make(map[int]float64, 0)
 
@@ -86,10 +90,14 @@ func (em *ExpenseManager) calculateSplit(shares map[int]float64, splitType Split
 			{
 				splitDetails[id] = (total * val) / 100
 			}
+		default:
+			{
+				return nil, fmt.Errorf("invalid split type %v", splitType)
+			}
 		}
 	}
 
-	return splitDetails
+	return splitDetails, nil
 }
 
 func (em *ExpenseManager) View(userId int) error {
@@ -108,6 +116,7 @@ func (em *ExpenseManager) View(userId int) error {
 		fmt.Println("No balances")
 		return nil
 	}
+
 	for id, val := range expenseMap {
 		debitor, err := em.userService.Get(id)
 		if err != nil {
