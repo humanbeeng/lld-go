@@ -22,12 +22,12 @@ func (e *LRUEvictor[K]) UpdateKeyAccess(key K) error {
 
 	ele, ok := e.nodeMap[key]
 	if ok {
-		// take the element and move to top
+		// Take the element and move to top
 		e.list.MoveToFront(ele)
 		return nil
 	}
 
-	// create a new list element, update the nodeMap and insert to front of list
+	// Create a new list element, update the nodeMap and insert to front of list
 	ele = e.list.PushFront(key)
 	e.nodeMap[key] = ele
 
